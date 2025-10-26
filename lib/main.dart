@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:twink/presentation/maintab.dart';
+import 'package:twink/presentation/settingstab.dart';
 
 void main() {
   runApp(const Body());
@@ -12,6 +12,7 @@ class Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Twink',
       theme: ThemeData(
 
@@ -21,18 +22,18 @@ class Body extends StatelessWidget {
         length: 3,
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('Переключение окон'),
+            title: const Text('GyverTwink Manager'),
             bottom: const TabBar(
               tabs: [
-                Tab(icon: Icon(Icons.home), text: 'Окно 1'),
-                Tab(icon: Icon(Icons.person), text: 'Окно 2'),
-                Tab(icon: Icon(Icons.settings), text: 'Окно 3'),
+                Tab(icon: Icon(Icons.home), text: 'Настройки'),
+                Tab(icon: Icon(Icons.settings), text: 'Настройки эффекта'),
+                Tab(icon: Icon(Icons.camera), text: 'Калибровка'),
               ],
             ),
           ),
           body: const TabBarView(
             children: [
-              Center(child: maintab() ),
+              Center(child: SKSettingsTab() ),
               Center(child: Text('Содержимое второго окна')),
               Center(child: Text('Содержимое третьего окна')),
             ],
