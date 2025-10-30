@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:twink/classes/subnetmaskinput.dart';
-import 'package:twink/classes/ledamount.dart';
+import 'package:twink/presentation/settingstab/iplistwidget.dart';
+import 'package:twink/presentation/settingstab/startsearchwidget.dart';
+import 'package:twink/presentation/settingstab/subnetmaskinputwidget.dart';
+import 'package:twink/presentation/settingstab/ledamountwidget.dart';
 
 
 class SKSettingsTab extends StatelessWidget {
@@ -10,12 +12,13 @@ class SKSettingsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        IpAddressInput(initialValue: '192.168.110.1'),
+        SubNetMaskInputWidget(initialValue: '192.168.110.1'),
         Text('Маска подсети'),
         Divider(),
-          LedAmount(),
+          LedAmountWidget(),
           Text('data'),
-
+          IpListWidget(),
+          StartSearchWidget(),
 
       ]
     );

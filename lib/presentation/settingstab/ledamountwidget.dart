@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LedAmount extends StatefulWidget {
-  const LedAmount({super.key});
+class LedAmountWidget extends StatefulWidget {
+  const LedAmountWidget({super.key});
 
   @override
-  State<LedAmount> createState() => _LedAmountState();
+  State<LedAmountWidget> createState() => _LedAmountWidgetState();
 }
 
-class _LedAmountState extends State<LedAmount> {
+class _LedAmountWidgetState extends State<LedAmountWidget> {
   late final TextEditingController _controller;
   final String _ledAmountKey =
       'led_amount'; // Ключ для сохранения в SharedPreferences

@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:twink/presentation/settingstab.dart';
+import 'package:provider/provider.dart';
+import 'package:twink/services/udp_service.dart';
 
 void main() {
-  runApp(const Body());
+  runApp(
+      ChangeNotifierProvider(
+        create: (context) => UdpService(),
+        child: const Body(),
+      ),
+  );
+
 }
 
 class Body extends StatelessWidget {
@@ -11,9 +19,10 @@ class Body extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Twink',
+      title: 'GyverTwink Manager',
       theme: ThemeData(
 
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),

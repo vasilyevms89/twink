@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:twink/classes/func.dart';
+import 'package:provider/provider.dart';
+
+import 'package:twink/services/udp_service.dart';
 
 
-class IpAddressInput extends StatefulWidget {
+class SubNetMaskInputWidget extends StatefulWidget {
   final String? initialValue;
-  const IpAddressInput({super.key, this.initialValue});
+  const SubNetMaskInputWidget({super.key, this.initialValue});
 
   @override
-  State<IpAddressInput> createState() => _IpAddressInputState();
+  State<SubNetMaskInputWidget> createState() => _SubNetMaskInputWidgetState();
 }
 
-class _IpAddressInputState extends State<IpAddressInput> {
+class _SubNetMaskInputWidgetState extends State<SubNetMaskInputWidget> {
   late final TextEditingController _controller;
 
   final _maskFormatter = MaskTextInputFormatter(
@@ -29,7 +31,8 @@ class _IpAddressInputState extends State<IpAddressInput> {
   }
 
   Future<void> _loadInitialData() async {
-    final mask = await loadSubNetMask();
+    final udpService = Provider.of<UdpService>(context, listen: false);
+    final mask = await udpService.loadSubNetMask();
     // Проверяем, что виджет все еще смонтирован, прежде чем обновлять состояние
     if (mounted) {
       setState(() {
@@ -48,6 +51,7 @@ class _IpAddressInputState extends State<IpAddressInput> {
 
   @override
   Widget build(BuildContext context) {
+    final udpService = Provider.of<UdpService>(context, listen: false);
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: TextField(
@@ -60,7 +64,7 @@ class _IpAddressInputState extends State<IpAddressInput> {
         ),
         inputFormatters: [_maskFormatter],
         onChanged: (value) {
-          saveSubNetMask(_controller.text); // Сохранение при каждом изменении
+          udpService.saveSubNetMask(_controller.text);
         },
       ),
     );
