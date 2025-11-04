@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:twink/services/udp_service.dart';
 
 class IpListWidget extends StatelessWidget {
+  const IpListWidget({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Consumer<UdpService>(

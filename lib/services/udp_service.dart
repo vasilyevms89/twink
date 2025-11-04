@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,7 +14,7 @@ class UdpService extends ChangeNotifier {
   bool found = false;
   bool searchF = false;
   int parseMode = 0;
-  int port = 8080;
+  int port = 8888;
   final String _subNetMaskKey = 'saved_subnet_mask';
   final String _curIpKey = 'saved_cur_ip'; // Ключ для сохранения текущего IP
   List<String> ips = [];
@@ -70,7 +69,7 @@ class UdpService extends ChangeNotifier {
         }
       }
     }
-    return "127.0.0.1";
+    return "192.168.1.11";
   }
 
   // Метод для запуска поиска
