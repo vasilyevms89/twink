@@ -2,6 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocalNetworkUsageDescription</key>
+    <string>Для поиска устройств в локальной сети требуется доступ к локальной сети.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>GT._udp</string>
+        <string>GT._tcp</string>
+    </array>
 	<key>NSCameraUsageDescription</key>
     <string>We need access to your camera for calibration.</string>
 	<key>CFBundleDevelopmentRegion</key>

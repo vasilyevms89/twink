@@ -93,7 +93,7 @@ class UdpService extends ChangeNotifier {
     searchF = true;
     parseMode = 0;
     ips.clear();
-    ips.add("searching...");
+    //ips.add("searching...");
     notifyListeners();
 
     curIP = brIP;
@@ -104,16 +104,18 @@ class UdpService extends ChangeNotifier {
     _searchTimer = Timer(const Duration(seconds: 2), () {
       // Если таймер сработал, значит ответов не было
       // или не было получено ни одного нового IP
-      if (ips.isEmpty || (ips.length == 1 && ips.first == "searching...")) {
+      /*if (ips.isEmpty || (ips.length == 1 && ips.first == "searching...")) {
         found = false;
         searchF = false;
         ips.clear();
         ips.add("not found");
         notifyListeners();
-      }
+      }*/
+      searchF = false;
       // Если ответы были, то таймер просто ничего не делает,
       // так как он уже не актуален.
     });
+    searchF = false;
   }
 
   // Метод для прослушивания UDP
