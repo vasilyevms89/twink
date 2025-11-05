@@ -99,6 +99,7 @@ class UdpService extends ChangeNotifier {
     curIP = brIP;
 
     _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+    _udp!.broadcastEnabled = true;
     _listenUdp();
     sendData([0]);
     _searchTimer = Timer(const Duration(seconds: 2), () {
