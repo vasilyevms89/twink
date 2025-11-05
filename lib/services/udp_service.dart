@@ -14,6 +14,7 @@ class UdpService extends ChangeNotifier {
   bool found = false;
   bool searchF = false;
   bool configRequestedForCurrentIp = false;
+  bool _isFirstSearchDone = false; // Флаг первого запуска
   int parseMode = 0;
   int port = 8888;
   final String _subNetMaskKey = 'saved_subnet_mask';
@@ -53,7 +54,13 @@ class UdpService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_subNetMaskKey, subnetmask);
   }
-
+  Future<void> initSearch() async {
+    if (_isFirstSearchDone) {
+      return;
+    }
+    await startSearch();
+    _isFirstSearchDone = true;
+  }
   // Метод для сохранения текущего IP
   Future<void> saveCurIp(String ip) async {
     final prefs = await SharedPreferences.getInstance();
@@ -63,6 +70,7 @@ class UdpService extends ChangeNotifier {
       configRequestedForCurrentIp = false; // Сбрасываем флаг: для нового IP конфиг еще не запрашивали
       notifyListeners();
     }
+
   }
 
   // Метод для получения локального IP-адреса
@@ -79,13 +87,13 @@ class UdpService extends ChangeNotifier {
 
   // Метод для запуска поиска
   Future<void> startSearch() async {
+    String? oldCurIP = curIP;
     final localIp = await getLocalIpAddress();
     final ipv4 = localIp.split('.').map(int.parse).toList();
     final maskString = await loadSubNetMask();
     final mask = maskString.split('.').map(int.parse).toList();
 
-    found = false;
-    curIP = null;
+
     brIP = null;
 
     for (int i = 0; i < 4; i++) {
@@ -94,30 +102,34 @@ class UdpService extends ChangeNotifier {
         brIP = (brIP ?? '') + '.';
       }
     }
+    found = false;
 
     searchF = true;
     parseMode = 0;
     ips.clear();
-    ips.add("searching...");
+
     notifyListeners();
 
     curIP = brIP;
 
-    _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-    _udp!.broadcastEnabled = true;
-    _listenUdp();
+    if (_udp == null) {
+      _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      _udp!.broadcastEnabled = true;
+      _listenUdp();
+    }
     sendData([0]);
+    _searchTimer?.cancel();
     _searchTimer = Timer(const Duration(seconds: 2), () {
-      // Если таймер сработал, значит ответов не было
-      // или не было получено ни одного нового IP
-      if (ips.isEmpty || (ips.length == 1 && ips.first == "searching...")) {
-        found = false;
+      searchF = false; // Устанавливаем FALSE только здесь
 
-        ips.clear();
-
-
+      if (oldCurIP != null && ips.contains(oldCurIP)) {
+        curIP = oldCurIP;
+      } else if (ips.isNotEmpty) {
+        curIP = ips.first;
+      } else {
+        curIP = null;
       }
-      searchF = false;
+
       notifyListeners();
       // Если ответы были, то таймер просто ничего не делает,
       // так как он уже не актуален.
@@ -142,7 +154,7 @@ class UdpService extends ChangeNotifier {
     parseMode = 1;
     configRequestedForCurrentIp = true; // Устанавливаем флаг перед отправкой
     sendData([1]);
-    notifyListeners(); // Оповещаем UI, что флаг изменился
+    //notifyListeners(); // Оповещаем UI, что флаг изменился
   }
 
   // Метод для отправки данных
@@ -173,7 +185,7 @@ class UdpService extends ChangeNotifier {
     List<int> data = ubuf.sublist(2).toList();
     if (data.isEmpty) return;
 
-    if (parseMode != data[0]) return;
+    //if (parseMode != data[0]) return;
 
     switch (data[0]) {
       case 0:
@@ -181,13 +193,13 @@ class UdpService extends ChangeNotifier {
           String ip = brIP!.substring(0, brIP!.lastIndexOf('.') + 1) + data[1].toString();
 
           if (!ips.contains(ip)) {
-            if (found ==false){
+            /*if (found ==false){
               ips.clear();
-            }
+            }*/
             ips.add(ip);
             found = true;
 
-            notifyListeners();
+            //notifyListeners();
           }
         }
         break;

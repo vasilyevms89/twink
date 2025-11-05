@@ -11,28 +11,25 @@ class IpSelectorWidget extends StatelessWidget {
       builder: (context, udpService, child) {
         // --- Логика запроса конфигурации (при старте виджета) ---
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!udpService.configRequestedForCurrentIp && udpService.ips.isNotEmpty) {
-            String targetIp = udpService.curIP ?? udpService.ips.first;
-            if (udpService.curIP == null) {
-              udpService.saveCurIp(targetIp).then((_) {
-                udpService.requestCfg();
-              });
-            } else {
+          if (udpService.curIP != null && !udpService.configRequestedForCurrentIp) {
+            udpService.requestCfg();
+          } else if (udpService.curIP == null && udpService.ips.isNotEmpty) {
+            udpService.saveCurIp(udpService.ips.first).then((_) {
               udpService.requestCfg();
-            }
+            });
           }
         });
 
         // --- Подготовка значения для DropdownButton ---
         String? currentValue = udpService.curIP;
+        final isListEmpty = udpService.ips.isEmpty;
 
-        // Гарантируем, что currentValue всегда содержит IP из списка, если список не пуст
         if (udpService.ips.isNotEmpty) {
           if (currentValue == null || !udpService.ips.contains(currentValue)) {
             currentValue = udpService.ips.first;
           }
         } else {
-          currentValue = null; // Если список пуст, value должен быть null
+          currentValue = null;
         }
 
         // --- Визуальное оформление в стиле TextField ---
@@ -40,38 +37,39 @@ class IpSelectorWidget extends StatelessWidget {
           padding: const EdgeInsets.all(8.0),
           child: InputDecorator(
             decoration: InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'IP адрес устройства', // Это будет ваш единственный хинт/лейбл
+              border: const OutlineInputBorder(),
+              labelText: 'IP адрес устройства',
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
               suffixIcon: udpService.searchF
-                  ? Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: const CircularProgressIndicator(strokeWidth: 2.0),
+                  ? const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(strokeWidth: 2.0),
               )
                   : IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  udpService.startSearch();
-                },
+                onPressed: () => udpService.startSearch(),
               ),
             ),
-            isEmpty: currentValue == null, // InputDecorator использует это для управления лейблом
+            isEmpty: isListEmpty, // InputDecorator использует это для управления лейблом
             child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
+              child: isListEmpty
+                  ? Container() // !!! ИСПРАВЛЕНИЕ: Используем пустой контейнер, чтобы не конфликтовать с labelText !!!
+                  : DropdownButton<String>(
                 value: currentValue,
                 isExpanded: true,
-                // !!! УДАЛИЛИ ХИНТ !!!
-                // hint: const Text("Устройства не найдены"),
-
                 onChanged: (String? newValue) {
                   if (newValue != null && newValue != udpService.curIP) {
-                    udpService.saveCurIp(newValue).then((_) {
-                      udpService.requestCfg();
-                    });
+                    udpService.saveCurIp(newValue);
+                    udpService.requestCfg();
                   }
                 },
-
-                items: udpService.ips.map<DropdownMenuItem<String>>((String ip) {
-                  return DropdownMenuItem<String>(value: ip, child: Text(ip));
+                items: udpService.ips
+                    .map<DropdownMenuItem<String>>((String ip) {
+                  return DropdownMenuItem<String>(
+                    value: ip,
+                    child: Text(ip),
+                  );
                 }).toList(),
               ),
             ),
