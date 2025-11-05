@@ -13,6 +13,7 @@ class UdpService extends ChangeNotifier {
   String? brIP;
   bool found = false;
   bool searchF = false;
+  bool configRequestedForCurrentIp = false;
   int parseMode = 0;
   int port = 8888;
   final String _subNetMaskKey = 'saved_subnet_mask';
@@ -57,7 +58,11 @@ class UdpService extends ChangeNotifier {
   Future<void> saveCurIp(String ip) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_curIpKey, ip);
-    curIP = ip;
+    if (curIP != ip) { // Если IP действительно меняется
+      curIP = ip;
+      configRequestedForCurrentIp = false; // Сбрасываем флаг: для нового IP конфиг еще не запрашивали
+      notifyListeners();
+    }
   }
 
   // Метод для получения локального IP-адреса
@@ -93,7 +98,7 @@ class UdpService extends ChangeNotifier {
     searchF = true;
     parseMode = 0;
     ips.clear();
-    //ips.add("searching...");
+    ips.add("searching...");
     notifyListeners();
 
     curIP = brIP;
@@ -105,18 +110,19 @@ class UdpService extends ChangeNotifier {
     _searchTimer = Timer(const Duration(seconds: 2), () {
       // Если таймер сработал, значит ответов не было
       // или не было получено ни одного нового IP
-      /*if (ips.isEmpty || (ips.length == 1 && ips.first == "searching...")) {
+      if (ips.isEmpty || (ips.length == 1 && ips.first == "searching...")) {
         found = false;
-        searchF = false;
+
         ips.clear();
-        ips.add("not found");
-        notifyListeners();
-      }*/
+
+
+      }
       searchF = false;
+      notifyListeners();
       // Если ответы были, то таймер просто ничего не делает,
       // так как он уже не актуален.
     });
-    searchF = false;
+
   }
 
   // Метод для прослушивания UDP
@@ -134,7 +140,9 @@ class UdpService extends ChangeNotifier {
   // Метод для запроса конфигурации
   void requestCfg() {
     parseMode = 1;
+    configRequestedForCurrentIp = true; // Устанавливаем флаг перед отправкой
     sendData([1]);
+    notifyListeners(); // Оповещаем UI, что флаг изменился
   }
 
   // Метод для отправки данных
@@ -171,9 +179,14 @@ class UdpService extends ChangeNotifier {
       case 0:
         if (brIP != null && data.length > 1) {
           String ip = brIP!.substring(0, brIP!.lastIndexOf('.') + 1) + data[1].toString();
+
           if (!ips.contains(ip)) {
+            if (found ==false){
+              ips.clear();
+            }
             ips.add(ip);
             found = true;
+
             notifyListeners();
           }
         }
