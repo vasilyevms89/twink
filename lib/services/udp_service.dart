@@ -132,6 +132,7 @@ class UdpService extends ChangeNotifier {
       if (curIP != null && ips.isNotEmpty) {
         requestCfg();
       }
+
       notifyListeners();
       // Если ответы были, то таймер просто ничего не делает,
       // так как он уже не актуален.
