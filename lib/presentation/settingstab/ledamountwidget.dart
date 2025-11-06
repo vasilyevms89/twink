@@ -12,6 +12,7 @@ class LedAmountWidget extends StatefulWidget {
 
 class _LedAmountWidgetState extends State<LedAmountWidget> {
   static const int minLeds = 1;
+  static const int maxLeds = 25599;
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
 
@@ -52,10 +53,14 @@ class _LedAmountWidgetState extends State<LedAmountWidget> {
       amount = minLeds;
       _controller.text = minLeds.toString(); // Обновляем UI, если нужно
     }
+    if (amount > maxLeds) {
+      amount = maxLeds;
+      _controller.text = maxLeds.toString(); // Обновляем UI, если нужно
+    }
 
     // Формирование и отправка массива
-    int highByte = amount! ~/ 100;
-    int lowByte = amount! % 100;
+    int highByte = amount ~/ 100;
+    int lowByte = amount % 100;
     List<int> dataToSend = [2, 0, highByte, lowByte];
 
     udpService.sendData(dataToSend);
