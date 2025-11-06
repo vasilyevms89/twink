@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:twink/services/udp_service.dart';
 
 class LedAmountWidget extends StatefulWidget {
   const LedAmountWidget({super.key});
@@ -10,56 +11,97 @@ class LedAmountWidget extends StatefulWidget {
 }
 
 class _LedAmountWidgetState extends State<LedAmountWidget> {
+  static const int minLeds = 1;
   late final TextEditingController _controller;
-  final String _ledAmountKey =
-      'led_amount'; // Ключ для сохранения в SharedPreferences
+  late final FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
-    // 2. Инициализация контроллера с начальным значением
-    _controller = TextEditingController(text: '25');
-    _loadLedAmount(); // Загрузка сохранённого количества светодиодов
-  }
+    _controller = TextEditingController();
+    _focusNode = FocusNode();
 
-  Future<void> _loadLedAmount() async {
-    final prefs = await SharedPreferences.getInstance();
-    final int ledAmount = prefs.getInt(_ledAmountKey) ?? 50;
-    _controller.text = '$ledAmount';
-  }
-
-  // Асинхронная функция для сохранения значения в SharedPreferences
-  Future<void> _saveLedAmount() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Безопасное преобразование и сохранение
-    final int ledAmount = int.tryParse(_controller.text) ?? 50;
-    await prefs.setInt(_ledAmountKey, ledAmount);
+    // Добавляем слушатель к FocusNode для отправки данных, когда пользователь убирает фокус
+    _focusNode.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
-    // 3. Очистка контроллера при удалении виджета
     _controller.dispose();
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  // Метод, вызываемый при потере фокуса
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) {
+      // Если фокус потерян (пользователь закончил ввод)
+      _sendAmountToDevice(context);
+    }
+  }
+
+  // Метод для обработки и отправки данных
+  void _sendAmountToDevice(BuildContext context) {
+    final udpService = Provider.of<UdpService>(context, listen: false);
+    String value = _controller.text;
+    int? amount = int.tryParse(value);
+
+    // Логика валидации: гарантируем положительное целое число
+    if (amount == null || amount < minLeds) {
+      amount = minLeds;
+      _controller.text = minLeds.toString(); // Обновляем UI, если нужно
+    }
+
+    // Формирование и отправка массива
+    int highByte = amount! ~/ 100;
+    int lowByte = amount! % 100;
+    List<int> dataToSend = [2, 0, highByte, lowByte];
+
+    udpService.sendData(dataToSend);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TextField(
-        controller: _controller,
-        keyboardType: TextInputType.number,
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(),
-          labelText: 'Количество светодиодов',
-          hintText: 'Обычно 10 шт на метр',
-        ),
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        onChanged: (value) {
-          _saveLedAmount(); // Сохранение при каждом изменении
-        },
-      ),
+    return Consumer<UdpService>(
+      builder: (context, udpService, child) {
+        final String currentLeds = udpService.ledsText;
+        final bool isReadOnly = currentLeds.isEmpty;
+
+        // Обновляем контроллер, если данные из сервиса изменились, пока виджет активен
+        if (_controller.text != currentLeds) {
+          _controller.text = currentLeds;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _controller,
+            focusNode: _focusNode, // Привязываем FocusNode
+            keyboardType: const TextInputType.numberWithOptions(signed: false, decimal: false),
+            readOnly: isReadOnly,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: 'Количество светодиодов',
+              hintText: isReadOnly ? 'Загрузка...' : 'Обычно 10 шт на метр',
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            // onSubmitted вызывается при нажатии кнопки "Готово/Enter"
+            onSubmitted: (value) {
+              _sendAmountToDevice(context);
+            },
+            // onChanged теперь не отправляет данные, только валидирует ввод
+            onChanged: (value) {
+              int? amount = int.tryParse(value);
+              if (amount == null || amount < minLeds) {
+                // Просто показываем ошибку или игнорируем, не отправляем данные
+              }
+            },
+          ),
+        );
+      },
     );
   }
 }

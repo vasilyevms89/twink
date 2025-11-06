@@ -34,9 +34,29 @@ class _SKSettingsTabState extends State<SKSettingsTab> {
       crossAxisAlignment: CrossAxisAlignment.stretch, // Для того чтобы виджеты занимали всю ширину
       children: [
         SubNetMaskInputWidget(initialValue: '192.168.110.1'),
-        LedAmountWidget(),
-        const Divider(),
         IpSelectorWidget(),
+
+        Consumer<UdpService>(
+          builder: (context, udpService, child) {
+            // Если список найденных IP-адресов не пуст, показываем виджет
+            if (udpService.ips.isNotEmpty) {
+              return Column(
+
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Divider(),
+                  LedAmountWidget(),
+                  const Divider(),
+                ],
+              );
+            } else {
+              // В противном случае ничего не показываем
+              return const SizedBox.shrink();
+            }
+          },
+        ),
+
+
       ],
     );
   }

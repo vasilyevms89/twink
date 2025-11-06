@@ -13,7 +13,8 @@ class IpSelectorWidget extends StatelessWidget {
         // Вызывается после построения кадра, чтобы не менять состояние во время build
         WidgetsBinding.instance.addPostFrameCallback((_) {
           // Если есть текущий IP и для него еще не запрашивали конфигурацию
-          if (udpService.curIP != null && !udpService.configRequestedForCurrentIp) {
+          if (udpService.curIP != null &&
+              !udpService.configRequestedForCurrentIp) {
             udpService.requestCfg();
           } else if (udpService.curIP == null && udpService.ips.isNotEmpty) {
             // Если curIP вообще не установлен, устанавливаем первый и запрашиваем конфиг
@@ -42,45 +43,54 @@ class IpSelectorWidget extends StatelessWidget {
           child: InputDecorator(
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
-              labelText: 'IP адрес устройства', // Это ваш основной лейбл/хинт
-              isDense: true, // Делает поле ввода более компактным
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0), // Отступы
+              labelText: 'IP адрес устройства',
+              // Это ваш основной лейбл/хинт
+              isDense: true,
+              // Делает поле ввода более компактным
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 8.0,
+              ),
+              // Отступы
               // Кнопка поиска / Индикатор загрузки
               suffixIcon: udpService.searchF
                   ? const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: CircularProgressIndicator(strokeWidth: 2.0),
-              )
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator(strokeWidth: 2.0),
+                    )
                   : IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  // Кнопка принудительного сканирования
-                  udpService.startSearch();
-                },
-              ),
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () {
+                        // Кнопка принудительного сканирования
+                        udpService.startSearch();
+                      },
+                    ),
             ),
-            isEmpty: isListEmpty, // InputDecorator использует это для управления лейблом
+            isEmpty: isListEmpty,
+            // InputDecorator использует это для управления лейблом
             child: DropdownButtonHideUnderline(
               child: isListEmpty
                   ? Container() // !!! Используем пустой контейнер, чтобы не конфликтовать с labelText !!!
                   : DropdownButton<String>(
-                value: currentValue,
-                isExpanded: true,
-                // Хинт не нужен, т.к. его роль выполняет labelText в InputDecorator
-                onChanged: (String? newValue) {
-                  if (newValue != null && newValue != udpService.curIP) {
-                    udpService.saveCurIp(newValue);
-                    udpService.requestCfg(); // Перезапрос конфига при смене IP
-                  }
-                },
-                items: udpService.ips
-                    .map<DropdownMenuItem<String>>((String ip) {
-                  return DropdownMenuItem<String>(
-                    value: ip,
-                    child: Text(ip),
-                  );
-                }).toList(),
-              ),
+                      value: currentValue,
+                      isExpanded: true,
+                      // Хинт не нужен, т.к. его роль выполняет labelText в InputDecorator
+                      onChanged: (String? newValue) {
+                        if (newValue != null && newValue != udpService.curIP) {
+                          udpService.saveCurIp(newValue);
+                          udpService
+                              .requestCfg(); // Перезапрос конфига при смене IP
+                        }
+                      },
+                      items: udpService.ips.map<DropdownMenuItem<String>>((
+                        String ip,
+                      ) {
+                        return DropdownMenuItem<String>(
+                          value: ip,
+                          child: Text(ip),
+                        );
+                      }).toList(),
+                    ),
             ),
           ),
         );
