@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:twink/presentation/settingstab/ipselectorwidget.dart';
-import 'package:twink/presentation/settingstab/startsearchwidget.dart';
+// import 'package:twink/presentation/settingstab/startsearchwidget.dart'; // Удален
 import 'package:twink/presentation/settingstab/subnetmaskinputwidget.dart';
 import 'package:twink/presentation/settingstab/ledamountwidget.dart';
 import 'package:twink/services/udp_service.dart';
@@ -14,34 +14,30 @@ class SKSettingsTab extends StatefulWidget {
 }
 
 class _SKSettingsTabState extends State<SKSettingsTab> {
-  late final udpService = Provider.of<UdpService>(context, listen: false);
-
   bool _isInit = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInit) {
-      // Вызываем initSearch только один раз
       Provider.of<UdpService>(context, listen: false).initSearch();
-      _isInit = true; // Устанавливаем флаг, что инициализация прошла
+      _isInit = true;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        // !!! ИСПРАВЛЕНИЕ: Выравниваем содержимое к началу !!!
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.stretch, // Чтобы виджеты занимали всю ширину
-        children: [
-          SubNetMaskInputWidget(initialValue: '192.168.110.1'),
-          LedAmountWidget(),
-          const Divider(),
-          IpSelectorWidget(),
-        ],
-      ),
+    // Просто возвращаем Column напрямую
+    return Column(
+      // Выравнивание к верху, занимает минимальное пространство, необходимое детям
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch, // Для того чтобы виджеты занимали всю ширину
+      children: [
+        SubNetMaskInputWidget(initialValue: '192.168.110.1'),
+        LedAmountWidget(),
+        const Divider(),
+        IpSelectorWidget(),
+      ],
     );
   }
 }
