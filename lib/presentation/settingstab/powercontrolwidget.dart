@@ -49,7 +49,7 @@ class _PowerControlWidgetState extends State<PowerControlWidget> {
                               currentBrightness == minBrightness) {
                             brightnessToSend = midBrightness;
                           }
-                          int a = 0;
+
 
                           // Отправляем новое состояние в сервис
                           udpService.updatePowerAndBrightness(newPowerValue, brightnessToSend);

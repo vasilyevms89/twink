@@ -251,6 +251,25 @@ class UdpService extends ChangeNotifier {
     // 3. Уведомляем UI об изменении состояния
     notifyListeners();
   }
+  void sendTimerSettings(bool timerEnabled, int minutes) {
+
+
+    // Убедимся, что минуты в безопасном диапазоне
+    int safeMinutes = minutes.clamp(0, 240);
+
+    // Формируем массив данных для отправки [протокол, state, minutes]
+    List<int> dataToSendOffTimer = [2, 7, timerEnabled ? 1 : 0];
+    List<int> dataToSendOffTimerValue = [2, 8, safeMinutes];
+    sendData(dataToSendOffTimer);
+    Future.delayed(const Duration(milliseconds: 100), () {
+
+      sendData(dataToSendOffTimerValue);
+    });
+    // Обновляем локальное состояние и UI
+    offTValue = timerEnabled;
+    offSValue = safeMinutes;
+    notifyListeners();
+  }
   // Метод для закрытия сокета при уничтожении сервиса
   @override
   void dispose() {
