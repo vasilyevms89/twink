@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:twink/presentation/settingstab/ipselectorwidget.dart';
-import 'package:twink/presentation/settingstab/offtimercontrolwidget.dart';
-import 'package:twink/presentation/settingstab/powercontrolwidget.dart';
-
 import 'package:twink/presentation/settingstab/subnetmaskinputwidget.dart';
 import 'package:twink/presentation/settingstab/ledamountwidget.dart';
+import 'package:twink/presentation/settingstab/powercontrolwidget.dart';
+import 'package:twink/presentation/settingstab/offtimercontrolwidget.dart'; // Добавлен импорт
 import 'package:twink/services/udp_service.dart';
 
 class SKSettingsTab extends StatefulWidget {
@@ -29,36 +28,32 @@ class _SKSettingsTabState extends State<SKSettingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Просто возвращаем Column напрямую
-    return Column(
-      // Выравнивание к верху, занимает минимальное пространство, необходимое детям
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      // Для того чтобы виджеты занимали всю ширину
+    // !!! ИСПОЛЬЗУЕМ ListView ДЛЯ РЕШЕНИЯ ПРОБЛЕМЫ С КЛАВИАТУРОЙ !!!
+    return ListView(
+      padding: const EdgeInsets.only(top: 8.0),
       children: [
         SubNetMaskInputWidget(initialValue: '192.168.110.1'),
-        IpSelectorWidget(),
 
+        // Consumer для условного отображения LedAmountWidget
         Consumer<UdpService>(
           builder: (context, udpService, child) {
-            // Если список найденных IP-адресов не пуст, показываем виджет
             if (udpService.ips.isNotEmpty) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Divider(),
                   LedAmountWidget(),
-                  PowerControlWidget(),
                   const Divider(),
-                  OffTimerControlWidget(),
                 ],
               );
             } else {
-              // В противном случае ничего не показываем
               return const SizedBox.shrink();
             }
           },
         ),
+
+        IpSelectorWidget(),
+        PowerControlWidget(),
+        OffTimerControlWidget(), // Ваш новый виджет
       ],
     );
   }
