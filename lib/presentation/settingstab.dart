@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:twink/presentation/settingstab/ipselectorwidget.dart';
+import 'package:twink/presentation/settingstab/powercontrolwidget.dart';
 // import 'package:twink/presentation/settingstab/startsearchwidget.dart'; // Удален
 import 'package:twink/presentation/settingstab/subnetmaskinputwidget.dart';
 import 'package:twink/presentation/settingstab/ledamountwidget.dart';
@@ -46,6 +47,7 @@ class _SKSettingsTabState extends State<SKSettingsTab> {
                 children: [
                   const Divider(),
                   LedAmountWidget(),
+                  PowerControlWidget(),
                   const Divider(),
                 ],
               );

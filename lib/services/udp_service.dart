@@ -232,7 +232,25 @@ class UdpService extends ChangeNotifier {
         break;
     }
   }
+  void updatePowerAndBrightness(bool power, int brightness) {
+    // 1. Обновляем локальные переменные состояния
+    powerValue = power;
+    briValue = brightness;
 
+    // 2. Формируем и отправляем UDP пакет(ы)
+    List<int> dataToSendPower = [2, 1, power ? 1 : 0];
+    List<int> dataToSendBrightness = [2, 2, brightness];
+
+    sendData(dataToSendBrightness);
+    // Добавим небольшую задержку между отправкой двух пакетов, если это нужно устройству
+    Future.delayed(const Duration(milliseconds: 100), () {
+
+      sendData(dataToSendPower);
+    });
+
+    // 3. Уведомляем UI об изменении состояния
+    notifyListeners();
+  }
   // Метод для закрытия сокета при уничтожении сервиса
   @override
   void dispose() {
