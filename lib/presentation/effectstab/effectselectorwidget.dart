@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:twink/presentation/effectstab/effectcontrolsliderwidget.dart';
 import 'package:twink/services/udp_service.dart';
 import 'package:twink/utils/effect_constants.dart';
 
@@ -110,6 +111,9 @@ class _EffectSelectorWidgetState extends State<EffectSelectorWidget> {
                       ),
                     ],
                   ),
+                  const Divider(),
+                  // !!! ВСТАВЛЯЕМ ДОЧЕРНИЙ ВИДЖЕТ СЮДА !!!
+                  const EffectControlSlidersWidget(),
                 ],
               ),
             ),

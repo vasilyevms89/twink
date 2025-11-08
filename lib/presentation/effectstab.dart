@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:twink/presentation/effectstab/effectcontrolsliderwidget.dart';
+
 import 'package:twink/presentation/effectstab/effectselectorwidget.dart';
 import 'package:twink/services/udp_service.dart';
 import 'package:twink/presentation/effectstab/effectgeneralsettingswidget.dart';
@@ -28,7 +28,7 @@ class EffectsTab extends StatelessWidget {
             children: const [
               EffectGeneralSettingsWidget(),
               EffectSelectorWidget(),
-              EffectControlSlidersWidget(),
+              //EffectControlSlidersWidget(),
             ],
           );
         }
