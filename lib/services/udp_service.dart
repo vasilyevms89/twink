@@ -349,7 +349,24 @@ class UdpService extends ChangeNotifier {
     sendData(dataToSend);
     notifyListeners();
   }
+  void sendStartCalibration() {
+    List<int> dataToSend = [3, 0];
+    sendData(dataToSend);
+  }
+  // Метод для отправки команды "Остановить калибровку"
+  void sendStopCalibration() {
+    List<int> dataToSend = [3, 2];
+    sendData(dataToSend);
+  }
+  void sendCalibrationStepData(int ledAmount, int calibCount, int maxX, int maxY) {
+    // В Processing: sendData(new int[] {3, 1, calibCount/100, calibCount%100, maxX, maxY});
+    int highByte = calibCount ~/ 100;
+    int lowByte = calibCount % 100;
 
+    // Отправляем массив байтов
+    List<int> dataToSend = [3, 1, highByte, lowByte, maxX, maxY];
+    sendData(dataToSend);
+  }
   // Метод для закрытия сокета при уничтожении сервиса
   @override
   void dispose() {

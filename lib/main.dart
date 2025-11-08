@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:twink/presentation/calibrationtab.dart';
 import 'package:twink/presentation/effectstab.dart';
 import 'package:twink/presentation/settingstab.dart';
 import 'package:provider/provider.dart';
@@ -43,7 +44,7 @@ class Body extends StatelessWidget {
             children: [
               Center(child: SKSettingsTab()),
               Center(child: EffectsTab()),
-              Center(child: Text('Содержимое третьего окна')),
+              Center(child: CalibrationTab()),
             ],
           ),
         ),
