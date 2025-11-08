@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:twink/presentation/effectstab.dart';
 import 'package:twink/presentation/settingstab.dart';
 import 'package:provider/provider.dart';
 import 'package:twink/services/udp_service.dart';
 
 void main() {
   runApp(
-      ChangeNotifierProvider(
-        create: (context) => UdpService(),
-        child: const Body(),
-      ),
+    ChangeNotifierProvider(
+      create: (context) => UdpService(),
+      child: const Body(),
+    ),
   );
-
 }
 
 class Body extends StatelessWidget {
@@ -19,17 +19,16 @@ class Body extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'GyverTwink Manager',
       theme: ThemeData(
-
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
       ),
       home: DefaultTabController(
         length: 3,
         child: Scaffold(
+          resizeToAvoidBottomInset: true,
           appBar: AppBar(
             title: const Text('GyverTwink Manager'),
             bottom: const TabBar(
@@ -42,17 +41,13 @@ class Body extends StatelessWidget {
           ),
           body: const TabBarView(
             children: [
-              Center(child: SKSettingsTab() ),
-              Center(child: Text('Содержимое второго окна')),
+              Center(child: SKSettingsTab()),
+              Center(child: EffectsTab()),
               Center(child: Text('Содержимое третьего окна')),
             ],
           ),
         ),
       ),
     );
-
-
   }
 }
-
-

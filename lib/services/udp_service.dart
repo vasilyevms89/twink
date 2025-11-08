@@ -33,6 +33,7 @@ class UdpService extends ChangeNotifier {
   bool favValue = false;
   int sclValue = 0;
   int spdValue = 0;
+  int currentEffectIndex = 0;
 
   // Getter для безопасного доступа к списку IP-адресов
   List<String> get foundIps => ips;
@@ -54,6 +55,7 @@ class UdpService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_subNetMaskKey, subnetmask);
   }
+
   Future<void> initSearch() async {
     if (_isFirstSearchDone) {
       return;
@@ -61,16 +63,18 @@ class UdpService extends ChangeNotifier {
     await startSearch();
     _isFirstSearchDone = true;
   }
+
   // Метод для сохранения текущего IP
   Future<void> saveCurIp(String ip) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_curIpKey, ip);
-    if (curIP != ip) { // Если IP действительно меняется
+    if (curIP != ip) {
+      // Если IP действительно меняется
       curIP = ip;
-      configRequestedForCurrentIp = false; // Сбрасываем флаг: для нового IP конфиг еще не запрашивали
+      configRequestedForCurrentIp =
+          false; // Сбрасываем флаг: для нового IP конфиг еще не запрашивали
       notifyListeners();
     }
-
   }
 
   // Метод для получения локального IP-адреса
@@ -92,7 +96,6 @@ class UdpService extends ChangeNotifier {
     final ipv4 = localIp.split('.').map(int.parse).toList();
     final maskString = await loadSubNetMask();
     final mask = maskString.split('.').map(int.parse).toList();
-
 
     brIP = null;
 
@@ -137,7 +140,6 @@ class UdpService extends ChangeNotifier {
       // Если ответы были, то таймер просто ничего не делает,
       // так как он уже не актуален.
     });
-
   }
 
   // Метод для прослушивания UDP
@@ -181,7 +183,9 @@ class UdpService extends ChangeNotifier {
 
   // Метод для приема данных
   void _receive(Uint8List ubuf) {
-    if (ubuf.length < 2 || ubuf[0] != 'G'.codeUnitAt(0) || ubuf[1] != 'T'.codeUnitAt(0)) {
+    if (ubuf.length < 2 ||
+        ubuf[0] != 'G'.codeUnitAt(0) ||
+        ubuf[1] != 'T'.codeUnitAt(0)) {
       return;
     }
 
@@ -193,7 +197,9 @@ class UdpService extends ChangeNotifier {
     switch (data[0]) {
       case 0:
         if (brIP != null && data.length > 1) {
-          String ip = brIP!.substring(0, brIP!.lastIndexOf('.') + 1) + data[1].toString();
+          String ip =
+              brIP!.substring(0, brIP!.lastIndexOf('.') + 1) +
+              data[1].toString();
 
           if (!ips.contains(ip)) {
             /*if (found ==false){
@@ -232,6 +238,7 @@ class UdpService extends ChangeNotifier {
         break;
     }
   }
+
   void updatePowerAndBrightness(bool power, int brightness) {
     // 1. Обновляем локальные переменные состояния
     powerValue = power;
@@ -244,16 +251,14 @@ class UdpService extends ChangeNotifier {
     sendData(dataToSendBrightness);
     // Добавим небольшую задержку между отправкой двух пакетов, если это нужно устройству
     Future.delayed(const Duration(milliseconds: 100), () {
-
       sendData(dataToSendPower);
     });
 
     // 3. Уведомляем UI об изменении состояния
     notifyListeners();
   }
+
   void sendTimerSettings(bool timerEnabled, int minutes) {
-
-
     // Убедимся, что минуты в безопасном диапазоне
     int safeMinutes = minutes.clamp(0, 240);
 
@@ -262,7 +267,6 @@ class UdpService extends ChangeNotifier {
     List<int> dataToSendOffTimerValue = [2, 8, safeMinutes];
     sendData(dataToSendOffTimer);
     Future.delayed(const Duration(milliseconds: 100), () {
-
       sendData(dataToSendOffTimerValue);
     });
     // Обновляем локальное состояние и UI
@@ -270,6 +274,82 @@ class UdpService extends ChangeNotifier {
     offSValue = safeMinutes;
     notifyListeners();
   }
+
+  void forceNextEffect() {
+    List<int> dataToSend = [2, 6];
+    sendData(dataToSend);
+  }
+
+  void sendAutoSwitchState(bool state) {
+    autoValue = state;
+    List<int> dataToSend = [2, 3, state ? 1 : 0];
+    sendData(dataToSend);
+    notifyListeners();
+  }
+
+  void sendRandomState(bool state) {
+    rndValue = state;
+    List<int> dataToSend = [2, 4, state ? 1 : 0];
+    sendData(dataToSend);
+    notifyListeners();
+  }
+
+  void sendPeriod(int minutes) {
+    prdValue = minutes.clamp(1, 10);
+    List<int> dataToSend = [
+      2,
+      5,
+      prdValue,
+    ]; // Пример протокола [5, ID_Period, Minutes]
+    sendData(dataToSend);
+    notifyListeners();
+  }
+
+  void sendEffectNumber(int effectNumber) {
+    int safeEffectNumber = effectNumber.clamp(0, 23);
+
+    List<int> dataToSend = [4, 0, safeEffectNumber];
+    sendData(dataToSend);
+
+    currentEffectIndex = safeEffectNumber;
+    notifyListeners();
+  }
+
+  void sendFavoriteState(bool isFavorite) {
+    favValue = isFavorite;
+    List<int> dataToSend = [
+      4,
+      1,
+      isFavorite ? 1 : 0,
+    ];
+    sendData(dataToSend);
+    notifyListeners();
+  }
+
+  // Метод для отправки скорости
+  void sendSpeed(int speed) {
+    spdValue = speed.clamp(0, 255);
+    List<int> dataToSend = [
+      4,
+      3,
+      spdValue,
+    ];
+    sendData(dataToSend);
+    notifyListeners();
+  }
+
+  // Метод для отправки масштаба
+  void sendScale(int scale) {
+    sclValue = scale.clamp(0, 255);
+    List<int> dataToSend = [
+      4,
+      2,
+      sclValue,
+    ];
+    sendData(dataToSend);
+    notifyListeners();
+  }
+
   // Метод для закрытия сокета при уничтожении сервиса
   @override
   void dispose() {

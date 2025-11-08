@@ -33,7 +33,7 @@ class _SKSettingsTabState extends State<SKSettingsTab> {
       padding: const EdgeInsets.only(top: 8.0),
       children: [
         SubNetMaskInputWidget(initialValue: '192.168.110.1'),
-
+        IpSelectorWidget(),
         // Consumer для условного отображения LedAmountWidget
         Consumer<UdpService>(
           builder: (context, udpService, child) {
@@ -43,6 +43,8 @@ class _SKSettingsTabState extends State<SKSettingsTab> {
                 children: [
                   LedAmountWidget(),
                   const Divider(),
+                  PowerControlWidget(),
+                  OffTimerControlWidget(),
                 ],
               );
             } else {
@@ -51,9 +53,8 @@ class _SKSettingsTabState extends State<SKSettingsTab> {
           },
         ),
 
-        IpSelectorWidget(),
-        PowerControlWidget(),
-        OffTimerControlWidget(), // Ваш новый виджет
+
+         // Ваш новый виджет
       ],
     );
   }
