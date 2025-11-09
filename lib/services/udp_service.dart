@@ -355,6 +355,7 @@ class UdpService extends ChangeNotifier {
   }
   // Метод для отправки команды "Остановить калибровку"
   void sendStopCalibration() {
+
     List<int> dataToSend = [3, 2];
     sendData(dataToSend);
   }

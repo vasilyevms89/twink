@@ -13,7 +13,8 @@ import 'package:twink/services/udp_service.dart';
 class CalibrationTab extends StatefulWidget {
   const CalibrationTab({super.key});
 
-  static const int X_GRID_SIZE = 60; // Размер сетки по X
+  //60
+  static const int X_GRID_SIZE = 100; // Размер сетки по X
 
   @override
   State<CalibrationTab> createState() => _CalibrationTabState();
@@ -24,10 +25,17 @@ class _CalibrationTabState extends State<CalibrationTab> {
   ImageProcessor? _imageProcessor;
   List<CameraDescription>? cameras;
   bool _isCameraInitialized = false;
+  bool _permissionDenied = false; //
   bool _isCalibrating = false;
+  bool _isCapturing = false; // Добавлен флаг для управления съемкой
   int _calibCount = 0;
   Timer? _calibrationTimer;
-  int maxX = 0, maxY = 0; // Координаты найденного светодиода
+  int _currentMaxX = 0;
+  int _currentMaxY = 0;
+  int maxX = 0;
+  int maxY = 0;
+  Offset? _ledPosition;
+  Size? _imageSize;
 
   @override
   void initState() {
@@ -36,25 +44,40 @@ class _CalibrationTabState extends State<CalibrationTab> {
   }
 
   Future<void> _requestCameraPermissionAndInitialize() async {
-    if (await Permission.camera.request().isGranted) {
+    final status = await Permission.camera.request();
+    if (status.isGranted) {
       _initializeCamera();
     } else {
-      // Обработка отказа в разрешении
+      // Обработка отказа в разрешении: обновляем состояние
       setState(() {
-        // Показать сообщение об ошибке
+        _permissionDenied = true;
+        _isCameraInitialized = false; // На всякий случай
       });
+      // Опционально: можно открыть настройки приложения, если пользователь нажал "Никогда не спрашивать"
+      /*if (status.isPermanentlyDenied) {
+        openAppSettings();
+      }*/
     }
   }
 
   Future<void> _initializeCamera() async {
     cameras = await availableCameras();
     if (cameras != null && cameras!.isNotEmpty) {
-      _controller = CameraController(cameras![0], ResolutionPreset.high);
-      await _controller!.initialize();
-      if (!mounted) return;
-      setState(() {
-        _isCameraInitialized = true;
-      });
+      _controller = CameraController(
+        cameras![0],
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+
+      try {
+        await _controller!.initialize();
+        if (!mounted) return;
+        setState(() {
+          _isCameraInitialized = true;
+        });
+      } on CameraException catch (e) {
+        print("Ошибка инициализации камеры: $e");
+      }
     }
   }
 
@@ -69,7 +92,8 @@ class _CalibrationTabState extends State<CalibrationTab> {
     if (!_isCameraInitialized ||
         _isCalibrating ||
         _controller == null ||
-        _controller!.value.isTakingPicture)
+        _controller!.value.isTakingPicture ||
+        _isCapturing)
       return;
 
     final udpService = Provider.of<UdpService>(context, listen: false);
@@ -78,71 +102,129 @@ class _CalibrationTabState extends State<CalibrationTab> {
       _isCalibrating = true;
       _calibCount = 0;
     });
+    try {
+      udpService.sendStartCalibration(); // Отправляем команду 3, 0
+      await Future.delayed(const Duration(milliseconds: 2000));
+      if (_controller == null || _controller!.value.isTakingPicture) return;
+      _isCapturing = true;
+      XFile baseFile = await _controller!.takePicture();
+      _isCapturing = false;
+      Uint8List baseImageBytes = await baseFile.readAsBytes();
 
-    udpService.sendStartCalibration(); // Отправляем команду 3, 0
-    await Future.delayed(const Duration(milliseconds: 2000));
-    XFile baseFile = await _controller!.takePicture();
-    Uint8List baseImageBytes = await baseFile.readAsBytes();
+      _imageProcessor = ImageProcessor(CalibrationTab.X_GRID_SIZE);
+      _imageProcessor!.captureBaseBrightness(baseImageBytes);
+      _performCalibrationStep(udpService);
+    } catch (e) {
+      print("Ошибка при калибровке: $e");
+      _stopCalibration();
+    }
+  }
 
-    _imageProcessor = ImageProcessor(CalibrationTab.X_GRID_SIZE);
-    _imageProcessor!.captureBaseBrightness(baseImageBytes);
-    // Запускаем таймер для пошаговой калибровки (как в Processing 400 мс)
-    _calibrationTimer = Timer.periodic(const Duration(milliseconds: 400), (
-      timer,
-    ) async {
-      try {
-        // 1. Захват кадра
-        XFile file = await _controller!.takePicture();
-        Uint8List imageBytes = await file.readAsBytes();
-
-        // 2. Обработка изображения на Dart (ваша логика)
-        CalibrationResult result = _imageProcessor!.processFrameForDelta(
-          imageBytes,
-        );
-        final int totalLeds = int.tryParse(udpService.ledsText) ?? 1;
-
-        if (_calibCount > totalLeds) {
-          _stopCalibration();
-          // Отправляем финальные данные (Команда 3, 2)
-          udpService.sendCalibrationStepData(
-            totalLeds,
-            _calibCount,
-            result.maxX,
-            result.maxY,
-          );
-          return;
-        }
-        // 3. Отправка шага калибровки
-        udpService.sendCalibrationStepData(
-          totalLeds,
-          _calibCount,
-          result.maxX,
-          result.maxY,
-        );
-
-        setState(() {
-          _calibCount++;
-        });
+  Future<void> _performCalibrationStep(UdpService udpService) async {
+    // 0. Начальные проверки: если не калибруется, снимает или контроллер не готов - выходим.
+    if (!_isCalibrating ||
+        _isCapturing ||
+        _controller == null ||
+        !_controller!.value.isInitialized) {
+      return;
+    }
 
 
-      } catch (e) {
-        print("Ошибка при калибровке: $e");
+
+    // Важно: Повторная проверка после задержки, так как состояние могло измениться
+    // (пользователь мог нажать Stop во время задержки).
+    if (!_isCalibrating || _controller == null || _imageProcessor == null) {
+      // Если состояние изменилось, аккуратно вызываем stop и выходим.
+      _stopCalibration();
+      return;
+    }
+
+    try {
+      // 1. Захват кадра
+      _isCapturing = true;
+      XFile file = await _controller!.takePicture();
+      _isCapturing = false;
+
+      // Чтение байтов (здесь нативный буфер освобождается плагином Camera)
+      Uint8List imageBytes = await file.readAsBytes();
+
+      // 2. Обработка изображения на Dart.
+      // Проверка на null уже была выше, но здесь для надежности
+      if (_imageProcessor == null) {
         _stopCalibration();
+        return;
       }
-    });
+
+      CalibrationResult result = _imageProcessor!.processFrameForDelta(
+        imageBytes,
+      );
+      final int totalLeds = int.tryParse(udpService.ledsText) ?? 1;
+
+      // 3. Обновление UI и состояния
+      setState(() {
+        // Защита от Null внутри setState
+        _imageSize ??= Size(
+          // Используем оператор ??= для установки значения, если оно null
+          result.imageWidth.toDouble(),
+          result.imageHeight.toDouble(),
+        );
+
+        final double sizeX = _imageSize!.width / CalibrationTab.X_GRID_SIZE;
+        final double sizeY = _imageSize!.height / (_imageSize!.height ~/ sizeX);
+
+        _ledPosition = Offset(
+          result.maxX * sizeX + sizeX / 2, // Центр ячейки X
+          result.maxY * sizeY + sizeY / 2, // Центр ячейки Y
+        );
+        _currentMaxX = result.maxX;
+        _currentMaxY = result.maxY;
+        _calibCount++; // Увеличиваем счетчик после обработки и отправки
+      });
+      // Задержка перед выполнением шага (400 мс между снимками),
+      // чтобы дать системе "передохнуть" перед следующим запросом кадра.
+      await Future.delayed(const Duration(milliseconds: 200));
+      // 4. Отправка данных UDP (не блокирует)
+      udpService.sendCalibrationStepData(
+        totalLeds,
+        _calibCount - 1, // Отправляем текущий счетчик
+        result.maxX,
+        result.maxY,
+      );
+
+      // 5. Проверка завершения
+      if (_calibCount >= totalLeds) {
+        await Future.delayed(const Duration(milliseconds: 1000));
+        _stopCalibration(); // Завершаем процесс
+        return;
+      }
+
+      // 6. Рекурсивный вызов для следующего шага
+      _performCalibrationStep(udpService);
+    } catch (e) {
+      // Единый блок обработки ошибок
+      print("Ошибка при калибровке: $e");
+      _stopCalibration();
+    }
   }
 
   void _stopCalibration() {
     final udpService = Provider.of<UdpService>(context, listen: false);
     _calibrationTimer?.cancel();
+
     udpService.sendStopCalibration(); // Отправляем команду 3, 2
     setState(() {
       _isCalibrating = false;
+      _isCapturing = false; // Обязательно сбросить флаг
       _calibCount = 0;
       _imageProcessor = null; // Очищаем процессор
+      _ledPosition = null; // <-- Сброс позиции при остановке
+      _imageSize = null; // <-- Сброс размера
+      _currentMaxX = 0; // <-- Сброс
+      _currentMaxY = 0; // <-- Сброс
     });
   }
 
+  @override
   @override
   Widget build(BuildContext context) {
     return Consumer<UdpService>(
@@ -151,29 +233,117 @@ class _CalibrationTabState extends State<CalibrationTab> {
           return const Center(child: Text("Не найдены устройства"));
         }
 
-        if (!_isCameraInitialized) {
+        // Проверяем, было ли отказано в разрешении
+        if (_permissionDenied) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Необходимо предоставить разрешение на камеру для калибровки.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Кнопка для открытия настроек приложения
+                      openAppSettings();
+                    },
+                    child: const Text("Открыть настройки разрешений"),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Если разрешения в порядке, но инициализация еще идет
+        if (!_isCameraInitialized ||
+            _controller == null ||
+            !_controller!.value.isInitialized) {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Основной UI с превью камеры
         return Column(
           children: [
             Expanded(
-              child: CameraPreview(_controller!), // Виджет предпросмотра камеры
+              // Используем LayoutBuilder для получения размера доступного пространства
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Stack(
+                    children: [
+                      // 1. Фон (CameraPreview)
+                      Positioned.fill(child: CameraPreview(_controller!)),
+
+                      // 2. Оверлей с красным контуром, если позиция найдена и идет калибровка
+                      if (_ledPosition != null &&
+                          _imageSize != null &&
+                          _isCalibrating)
+                        Positioned(
+                          // Смещение 12.5 (половина от 25px размера) для центрирования
+                          left:
+                              (_ledPosition!.dx / _imageSize!.width) *
+                                  constraints.maxWidth -
+                              12.5,
+                          top:
+                              (_ledPosition!.dy / _imageSize!.height) *
+                                  constraints.maxHeight -
+                              12.5,
+                          child: Container(
+                            width: 25,
+                            height: 25,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.red, // Цвет контура
+                                width: 3, // Толщина контура
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              child: Column(
+                // Используем Column для размещения кнопок и текста координат
                 children: [
-                  ElevatedButton(
-                    onPressed: _isCalibrating ? null : _startCalibration,
-                    child: const Text("Start"),
+                  Row(
+                    // Строка для кнопок и прогресса
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      ElevatedButton(
+                        onPressed: _isCalibrating ? null : _startCalibration,
+                        child: const Text("Start"),
+                      ),
+                      Builder(
+                        // Вычисление и отображение процента
+                        builder: (context) {
+                          final int totalLeds =
+                              int.tryParse(udpService.ledsText) ?? 1;
+                          final int progressPercent = totalLeds > 0
+                              ? ((_calibCount / totalLeds) * 100).toInt()
+                              : 0;
+                          return Text('Progress: $progressPercent%');
+                        },
+                      ),
+                      ElevatedButton(
+                        onPressed: _isCalibrating ? _stopCalibration : null,
+                        child: const Text("Stop"),
+                      ),
+                    ],
                   ),
-                  Text('Progress: ${_calibCount}%'),
-                  ElevatedButton(
-                    onPressed: _isCalibrating ? _stopCalibration : null,
-                    child: const Text("Stop"),
-                  ),
+                  const SizedBox(height: 10), // Небольшой отступ
+                  // Новый виджет с координатами, виден только во время калибровки
+                  if (_isCalibrating)
+                    Text('Координаты: X=$_currentMaxX, Y=$_currentMaxY'),
                 ],
               ),
             ),

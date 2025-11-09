@@ -6,8 +6,16 @@ class CalibrationResult {
   final int maxX;
   final int maxY;
   final int calibCount;
+  final int imageWidth;
+  final int imageHeight;
 
-  CalibrationResult({required this.maxX, required this.maxY, required this.calibCount});
+  CalibrationResult({
+    required this.maxX,
+    required this.maxY,
+    required this.calibCount,
+    required this.imageWidth,
+    required this.imageHeight,
+  });
 }
 
 class ImageProcessor {
@@ -51,12 +59,24 @@ class ImageProcessor {
   CalibrationResult processFrameForDelta(Uint8List imageBytes) {
     if (_baseBrightnessMap == null) {
       // Этого не должно произойти, если логика в виджете правильная
-      return CalibrationResult(maxX: 0, maxY: 0, calibCount: 0);
+      return CalibrationResult(
+        maxX: 0,
+        maxY: 0,
+        calibCount: 0,
+        imageWidth: 0,
+        imageHeight: 0,
+      );
     }
 
     img.Image? currentImage = img.decodeImage(imageBytes);
     if (currentImage == null) {
-      return CalibrationResult(maxX: 0, maxY: 0, calibCount: 0);
+      return CalibrationResult(
+        maxX: 0,
+        maxY: 0,
+        calibCount: 0,
+        imageWidth: 0,
+        imageHeight: 0,
+      );
     }
 
     List<int> currentMap = _makeBrightnessMap(currentImage);
@@ -74,11 +94,18 @@ class ImageProcessor {
       }
     }
 
-    final int Y_GRID_SIZE = currentImage.height ~/ (currentImage.width ~/ X_GRID_SIZE);
+    final int Y_GRID_SIZE =
+        currentImage.height ~/ (currentImage.width ~/ X_GRID_SIZE);
     final int maxX = maxIndex % X_GRID_SIZE;
     final int maxY = maxIndex ~/ X_GRID_SIZE;
     final int totalCells = X_GRID_SIZE * Y_GRID_SIZE;
 
-    return CalibrationResult(maxX: maxX, maxY: maxY, calibCount: totalCells);
+    return CalibrationResult(
+      maxX: maxX,
+      maxY: maxY,
+      calibCount: totalCells,
+      imageWidth: currentImage.width,
+      imageHeight: currentImage.height
+    );
   }
 }

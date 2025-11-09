@@ -28,7 +28,7 @@ class _SKSettingsTabState extends State<SKSettingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    // !!! ИСПОЛЬЗУЕМ ListView ДЛЯ РЕШЕНИЯ ПРОБЛЕМЫ С КЛАВИАТУРОЙ !!!
+
     return ListView(
       padding: const EdgeInsets.only(top: 8.0),
       children: [
@@ -54,7 +54,7 @@ class _SKSettingsTabState extends State<SKSettingsTab> {
         ),
 
 
-         // Ваш новый виджет
+
       ],
     );
   }
