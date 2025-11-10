@@ -241,18 +241,43 @@ class UdpService extends ChangeNotifier {
 
   void updatePowerAndBrightness(bool power, int brightness) {
     // 1. Обновляем локальные переменные состояния
-    powerValue = power;
-    briValue = brightness;
+    //powerValue = power;
+    //briValue = brightness;
 
     // 2. Формируем и отправляем UDP пакет(ы)
     List<int> dataToSendPower = [2, 1, power ? 1 : 0];
     List<int> dataToSendBrightness = [2, 2, brightness];
 
-    sendData(dataToSendBrightness);
+    //sendData(dataToSendBrightness);
+    //sendData(dataToSendPower);
     // Добавим небольшую задержку между отправкой двух пакетов, если это нужно устройству
+    if (briValue != brightness) {
+      sendData(dataToSendBrightness);
+      briValue = brightness;
+      notifyListeners();
+    }
+
     Future.delayed(const Duration(milliseconds: 100), () {
-      sendData(dataToSendPower);
+      if (powerValue != power) {
+        sendData(dataToSendPower);
+        powerValue = power;
+        notifyListeners();
+      }
     });
+
+
+
+    // 3. Уведомляем UI об изменении состояния
+
+  }
+
+  void updatePower(bool power) {
+    // 1. Обновляем локальные переменные состояния
+    powerValue = power;
+    // 2. Формируем и отправляем UDP пакет(ы)
+    List<int> dataToSendPower = [2, 1, power ? 1 : 0];
+
+    sendData(dataToSendPower);
 
     // 3. Уведомляем UI об изменении состояния
     notifyListeners();
@@ -317,11 +342,7 @@ class UdpService extends ChangeNotifier {
 
   void sendFavoriteState(bool isFavorite) {
     favValue = isFavorite;
-    List<int> dataToSend = [
-      4,
-      1,
-      isFavorite ? 1 : 0,
-    ];
+    List<int> dataToSend = [4, 1, isFavorite ? 1 : 0];
     sendData(dataToSend);
     notifyListeners();
   }
@@ -329,11 +350,7 @@ class UdpService extends ChangeNotifier {
   // Метод для отправки скорости
   void sendSpeed(int speed) {
     spdValue = speed.clamp(0, 255);
-    List<int> dataToSend = [
-      4,
-      3,
-      spdValue,
-    ];
+    List<int> dataToSend = [4, 3, spdValue];
     sendData(dataToSend);
     notifyListeners();
   }
@@ -341,25 +358,28 @@ class UdpService extends ChangeNotifier {
   // Метод для отправки масштаба
   void sendScale(int scale) {
     sclValue = scale.clamp(0, 255);
-    List<int> dataToSend = [
-      4,
-      2,
-      sclValue,
-    ];
+    List<int> dataToSend = [4, 2, sclValue];
     sendData(dataToSend);
     notifyListeners();
   }
+
   void sendStartCalibration() {
     List<int> dataToSend = [3, 0];
     sendData(dataToSend);
   }
+
   // Метод для отправки команды "Остановить калибровку"
   void sendStopCalibration() {
-
     List<int> dataToSend = [3, 2];
     sendData(dataToSend);
   }
-  void sendCalibrationStepData(int ledAmount, int calibCount, int maxX, int maxY) {
+
+  void sendCalibrationStepData(
+    int ledAmount,
+    int calibCount,
+    int maxX,
+    int maxY,
+  ) {
     // В Processing: sendData(new int[] {3, 1, calibCount/100, calibCount%100, maxX, maxY});
     int highByte = calibCount ~/ 100;
     int lowByte = calibCount % 100;
@@ -368,6 +388,7 @@ class UdpService extends ChangeNotifier {
     List<int> dataToSend = [3, 1, highByte, lowByte, maxX, maxY];
     sendData(dataToSend);
   }
+
   // Метод для закрытия сокета при уничтожении сервиса
   @override
   void dispose() {

@@ -52,7 +52,7 @@ class _PowerControlWidgetState extends State<PowerControlWidget> {
 
 
                           // Отправляем новое состояние в сервис
-                          udpService.updatePowerAndBrightness(newPowerValue, brightnessToSend);
+                          udpService.updatePowerAndBrightness(newPowerValue,brightnessToSend);
                         },
                       ),
                     ],
