@@ -129,8 +129,6 @@ class _CalibrationTabState extends State<CalibrationTab> {
       return;
     }
 
-
-
     // Важно: Повторная проверка после задержки, так как состояние могло измениться
     // (пользователь мог нажать Stop во время задержки).
     if (!_isCalibrating || _controller == null || _imageProcessor == null) {
@@ -209,7 +207,7 @@ class _CalibrationTabState extends State<CalibrationTab> {
 
   void _stopCalibration() {
     final udpService = Provider.of<UdpService>(context, listen: false);
-    _calibrationTimer?.cancel();
+
 
     udpService.sendStopCalibration(); // Отправляем команду 3, 2
     setState(() {
@@ -230,7 +228,12 @@ class _CalibrationTabState extends State<CalibrationTab> {
     return Consumer<UdpService>(
       builder: (context, udpService, child) {
         if (udpService.ips.isEmpty) {
-          return const Center(child: Text("Не найдены устройства"));
+          return const Center(
+            child: Text(
+              "Устройства не найдены",
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+          );
         }
 
         // Проверяем, было ли отказано в разрешении
@@ -319,9 +322,12 @@ class _CalibrationTabState extends State<CalibrationTab> {
                     // Строка для кнопок и прогресса
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      ElevatedButton(
-                        onPressed: _isCalibrating ? null : _startCalibration,
-                        child: const Text("Start"),
+                      SizedBox(
+                        width: 100,
+                        child: ElevatedButton(
+                          onPressed: _isCalibrating ? null : _startCalibration,
+                          child: const Text("Старт"),
+                        ),
                       ),
                       Builder(
                         // Вычисление и отображение процента
@@ -331,16 +337,20 @@ class _CalibrationTabState extends State<CalibrationTab> {
                           final int progressPercent = totalLeds > 0
                               ? ((_calibCount / totalLeds) * 100).toInt()
                               : 0;
-                          return Text('Progress: $progressPercent%');
+                          return Text('Выполнено: $progressPercent%');
                         },
                       ),
-                      ElevatedButton(
-                        onPressed: _isCalibrating ? _stopCalibration : null,
-                        child: const Text("Stop"),
+                      SizedBox(
+                        width: 100,
+                        child: ElevatedButton(
+                          onPressed: _isCalibrating ? _stopCalibration : null,
+                          child: const Text("Стоп"),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10), // Небольшой отступ
+                  const SizedBox(height: 10),
+                  // Небольшой отступ
                   // Новый виджет с координатами, виден только во время калибровки
                   if (_isCalibrating)
                     Text('Координаты: X=$_currentMaxX, Y=$_currentMaxY'),
@@ -353,3 +363,12 @@ class _CalibrationTabState extends State<CalibrationTab> {
     );
   }
 }
+/*Дополнительный важный шаг (Capabilities)
+Просто добавления ключа в Info.plist может быть недостаточно. Вам также нужно включить опцию "Networking" в настройках проекта Xcode.
+Откройте ваш проект в Xcode: open ios/Runner.xcworkspace.
+В навигаторе проекта слева выберите Runner.
+Выберите вкладку Signing & Capabilities.
+Нажмите кнопку + Capability в левом верхнем углу.
+Найдите и дважды кликните по "Background Modes".
+Установите галочку напротив "Local Networking".
+После выполнения этих шагов вы будете уверены, что ваше iOS-приложение имеет все необходимые разрешения и настройки для работы с камерой и широковещательными UDP-сокетами.*/

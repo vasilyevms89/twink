@@ -62,7 +62,7 @@ class _LedAmountWidgetState extends State<LedAmountWidget> {
     int highByte = amount ~/ 100;
     int lowByte = amount % 100;
     List<int> dataToSend = [2, 0, highByte, lowByte];
-
+    udpService.ledsText = _controller.text;
     udpService.sendData(dataToSend);
   }
 

@@ -148,7 +148,7 @@ class UdpService extends ChangeNotifier {
       if (event == RawSocketEvent.read) {
         Datagram? datagram = _udp!.receive();
         if (datagram != null) {
-          _receive(datagram.data);
+          _receive(datagram.data, datagram.address, datagram.port);
         }
       }
     });
@@ -173,16 +173,18 @@ class UdpService extends ChangeNotifier {
 
   // Метод для отправки байтов
   void _sendDataBytes(Uint8List data) {
+
     if (curIP != null && !curIP!.startsWith('n') && _udp != null) {
       _udp!.send(data, InternetAddress(curIP!), port);
       Future.delayed(const Duration(milliseconds: 15), () {
         _udp!.send(data, InternetAddress(curIP!), port);
       });
+
     }
   }
 
   // Метод для приема данных
-  void _receive(Uint8List ubuf) {
+  void _receive(Uint8List ubuf, InternetAddress senderAddress, int senderPort) {
     if (ubuf.length < 2 ||
         ubuf[0] != 'G'.codeUnitAt(0) ||
         ubuf[1] != 'T'.codeUnitAt(0)) {
@@ -197,14 +199,12 @@ class UdpService extends ChangeNotifier {
     switch (data[0]) {
       case 0:
         if (brIP != null && data.length > 1) {
-          String ip =
-              brIP!.substring(0, brIP!.lastIndexOf('.') + 1) +
-              data[1].toString();
+          String ip = senderAddress.address;
+              /*brIP!.substring(0, brIP!.lastIndexOf('.') + 1) +
+              data[1].toString();*/
 
           if (!ips.contains(ip)) {
-            /*if (found ==false){
-              ips.clear();
-            }*/
+
             ips.add(ip);
             found = true;
 
@@ -243,7 +243,7 @@ class UdpService extends ChangeNotifier {
     // 1. Обновляем локальные переменные состояния
     //powerValue = power;
     //briValue = brightness;
-
+    print (curIP);
     // 2. Формируем и отправляем UDP пакет(ы)
     List<int> dataToSendPower = [2, 1, power ? 1 : 0];
     List<int> dataToSendBrightness = [2, 2, brightness];

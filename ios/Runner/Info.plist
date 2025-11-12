@@ -10,7 +10,9 @@
         <string>GT._tcp</string>
     </array>
 	<key>NSCameraUsageDescription</key>
-    <string>We need access to your camera for calibration.</string>
+    <string>Доступ к камере необходим для калибровки.</string>
+    <key>UIRequiresPersistentWiFi</key>
+    <true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

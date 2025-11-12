@@ -17,7 +17,7 @@ class EffectsTab extends StatelessWidget {
           // Если устройств нет, показываем центрированный текст
           return const Center(
             child: Text(
-              "Не найдены устройства",
+              "Устройства не найдены",
               style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
           );

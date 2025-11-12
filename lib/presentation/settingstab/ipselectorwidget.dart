@@ -87,7 +87,14 @@ class IpSelectorWidget extends StatelessWidget {
                       ) {
                         return DropdownMenuItem<String>(
                           value: ip,
-                          child: Text(ip),
+                          child: Text(
+                            ip,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight
+                                      .normal, // Принудительно делаем нежирным
+                                ),
+                          ),
                         );
                       }).toList(),
                     ),
