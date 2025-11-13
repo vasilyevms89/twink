@@ -318,6 +318,11 @@ class _CalibrationTabState extends State<CalibrationTab> {
               child: Column(
                 // Используем Column для размещения кнопок и текста координат
                 children: [
+                  // Небольшой отступ
+                  // Новый виджет с координатами, виден только во время калибровки
+                  if (/*_isCalibrating*/true)
+                    Text('Координаты: X=$_currentMaxX, Y=$_currentMaxY'),
+                  const SizedBox(height: 10),
                   Row(
                     // Строка для кнопок и прогресса
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -349,11 +354,8 @@ class _CalibrationTabState extends State<CalibrationTab> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  // Небольшой отступ
-                  // Новый виджет с координатами, виден только во время калибровки
-                  if (_isCalibrating)
-                    Text('Координаты: X=$_currentMaxX, Y=$_currentMaxY'),
+
+
                 ],
               ),
             ),
