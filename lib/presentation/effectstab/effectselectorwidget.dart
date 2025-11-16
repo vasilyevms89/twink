@@ -78,6 +78,7 @@ class _EffectSelectorWidgetState extends State<EffectSelectorWidget> {
                           onChanged: (EffectType? newValue) {
                             if (newValue != null) {
                               int newControllerValue = _calculateControllerEffectNumber(newValue.id, selectedPalette.id);
+
                               udpService.sendEffectNumber(newControllerValue);
                             }
                           },

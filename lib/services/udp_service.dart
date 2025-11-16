@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/effect_constants.dart';
+
 // Этот класс наследуется от ChangeNotifier, чтобы оповещать виджеты
 // об изменениях состояния.
 class UdpService extends ChangeNotifier {
@@ -331,7 +333,7 @@ class UdpService extends ChangeNotifier {
   }
 
   void sendEffectNumber(int effectNumber) {
-    int safeEffectNumber = effectNumber.clamp(0, 23);
+    int safeEffectNumber = effectNumber.clamp(0, effectTypes.length*palettes.length);
 
     List<int> dataToSend = [4, 0, safeEffectNumber];
     sendData(dataToSend);

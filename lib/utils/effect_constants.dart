@@ -12,8 +12,10 @@ class Palette {
 
 // Список типов эффектов
 const List<EffectType> effectTypes = [
-  EffectType(0, "Диагональный градиент"),
-  EffectType(1, "Шум Перлина"),
+  EffectType(0, "Огонь"),
+  EffectType(1, "Диагональный градиент"),
+  EffectType(2, "Прямой градиент"),
+  EffectType(3, "Шум Перлина"),
   // В будущем новые эффекты можно добавлять сюда:
   // EffectType(2, "Новый эффект"),
 ];
