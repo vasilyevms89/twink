@@ -36,7 +36,20 @@ class UdpService extends ChangeNotifier {
   int sclValue = 0;
   int spdValue = 0;
   int currentEffectIndex = 0;
+  String? _lastError; // Переменная для хранения последней ошибки
 
+  String? get lastError => _lastError; // Геттер для доступа из виджетов
+
+  void setError(String message) {
+    _lastError = message;
+    notifyListeners(); // Уведомляем виджеты об изменении
+
+  }
+
+  void clearError() {
+    _lastError = null;
+    notifyListeners();
+  }
   // Getter для безопасного доступа к списку IP-адресов
   List<String> get foundIps => ips;
 
@@ -245,7 +258,7 @@ class UdpService extends ChangeNotifier {
     // 1. Обновляем локальные переменные состояния
     //powerValue = power;
     //briValue = brightness;
-    print (curIP);
+
     // 2. Формируем и отправляем UDP пакет(ы)
     List<int> dataToSendPower = [2, 1, power ? 1 : 0];
     List<int> dataToSendBrightness = [2, 2, brightness];

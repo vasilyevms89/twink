@@ -49,6 +49,8 @@ class _CalibrationTabState extends State<CalibrationTab> {
       _initializeCamera();
     } else {
       // Обработка отказа в разрешении: обновляем состояние
+      final udpService = Provider.of<UdpService>(context, listen: false);
+      udpService.setError("Ошибка: Отклонено разрешение на использование камеры.");
       setState(() {
         _permissionDenied = true;
         _isCameraInitialized = false; // На всякий случай
@@ -76,7 +78,8 @@ class _CalibrationTabState extends State<CalibrationTab> {
           _isCameraInitialized = true;
         });
       } on CameraException catch (e) {
-        print("Ошибка инициализации камеры: $e");
+        final udpService = Provider.of<UdpService>(context, listen: false);
+        udpService.setError("Ошибка инициализации камеры: $e");
       }
     }
   }
@@ -93,11 +96,12 @@ class _CalibrationTabState extends State<CalibrationTab> {
         _isCalibrating ||
         _controller == null ||
         _controller!.value.isTakingPicture ||
-        _isCapturing)
+        _isCapturing) {
       return;
+    }
 
     final udpService = Provider.of<UdpService>(context, listen: false);
-
+    udpService.clearError();
     setState(() {
       _isCalibrating = true;
       _calibCount = 0;
@@ -115,7 +119,8 @@ class _CalibrationTabState extends State<CalibrationTab> {
       _imageProcessor!.captureBaseBrightness(baseImageBytes);
       _performCalibrationStep(udpService);
     } catch (e) {
-      print("Ошибка при калибровке: $e");
+
+      udpService.setError("Ошибка при калибровке: $e");
       _stopCalibration();
     }
   }
@@ -200,7 +205,8 @@ class _CalibrationTabState extends State<CalibrationTab> {
       _performCalibrationStep(udpService);
     } catch (e) {
       // Единый блок обработки ошибок
-      print("Ошибка при калибровке: $e");
+
+      udpService.setError("Ошибка при калибровке: $e");
       _stopCalibration();
     }
   }
@@ -223,145 +229,156 @@ class _CalibrationTabState extends State<CalibrationTab> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
+    // Consumer подписывается на изменения в UdpService (ошибки, статус поиска и т.д.)
     return Consumer<UdpService>(
       builder: (context, udpService, child) {
-        if (udpService.ips.isEmpty) {
-          return const Center(
-            child: Text(
-              "Устройства не найдены",
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-          );
-        }
-
-        // Проверяем, было ли отказано в разрешении
-        if (_permissionDenied) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Необходимо предоставить разрешение на камеру для калибровки.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Кнопка для открытия настроек приложения
-                      openAppSettings();
-                    },
-                    child: const Text("Открыть настройки разрешений"),
-                  ),
-                ],
+        // Если есть ошибка, отображаем баннер
+        if (udpService.lastError != null) {
+          return Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12.0),
+                color: Colors.red,
+                child: Text(
+                  'ОШИБКА: ${udpService.lastError}',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
+              // Оберните оставшуюся часть UI в Expanded, чтобы она занимала оставшееся место
+              Expanded(child: _buildMainCalibrationUI(context, udpService)),
+            ],
           );
         }
 
-        // Если разрешения в порядке, но инициализация еще идет
-        if (!_isCameraInitialized ||
-            _controller == null ||
-            !_controller!.value.isInitialized) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        // Если ошибок нет, отображаем основной интерфейс
+        return _buildMainCalibrationUI(context, udpService);
+      },
+    );
+  }
 
-        // Основной UI с превью камеры
-        return Column(
-          children: [
-            Expanded(
-              // Используем LayoutBuilder для получения размера доступного пространства
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    children: [
-                      // 1. Фон (CameraPreview)
-                      Positioned.fill(child: CameraPreview(_controller!)),
+  // Вспомогательный метод, который содержит основную логику UI
+  Widget _buildMainCalibrationUI(BuildContext context, UdpService udpService) {
+    // Проверки на наличие устройств
+    if (udpService.ips.isEmpty) {
+      return const Center(
+        child: Text(
+          "Устройства не найдены",
+          style: TextStyle(fontSize: 18, color: Colors.grey),
+        ),
+      );
+    }
 
-                      // 2. Оверлей с красным контуром, если позиция найдена и идет калибровка
-                      if (_ledPosition != null &&
-                          _imageSize != null &&
-                          _isCalibrating)
-                        Positioned(
-                          // Смещение 12.5 (половина от 25px размера) для центрирования
-                          left:
-                              (_ledPosition!.dx / _imageSize!.width) *
-                                  constraints.maxWidth -
-                              12.5,
-                          top:
-                              (_ledPosition!.dy / _imageSize!.height) *
-                                  constraints.maxHeight -
-                              12.5,
-                          child: Container(
-                            width: 25,
-                            height: 25,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.red, // Цвет контура
-                                width: 3, // Толщина контура
-                              ),
-                            ),
+    // Проверка разрешений камеры (логика из вашего кода)
+    if (_permissionDenied) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                "Необходимо предоставить разрешение на камеру для калибровки.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  openAppSettings(); // Функция из пакета permission_handler
+                },
+                child: const Text("Открыть настройки разрешений"),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Если разрешения в порядке, но инициализация еще идет
+    if (!_isCameraInitialized ||
+        _controller == null ||
+        !_controller!.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Основной UI с превью камеры
+    return Column(
+      children: [
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                children: [
+                  Positioned.fill(child: CameraPreview(_controller!)),
+                  if (_ledPosition != null &&
+                      _imageSize != null &&
+                      _isCalibrating)
+                    Positioned(
+                      left: (_ledPosition!.dx / _imageSize!.width) *
+                          constraints.maxWidth -
+                          12.5,
+                      top: (_ledPosition!.dy / _imageSize!.height) *
+                          constraints.maxHeight -
+                          12.5,
+                      child: Container(
+                        width: 25,
+                        height: 25,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.red,
+                            width: 3,
                           ),
                         ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                // Используем Column для размещения кнопок и текста координат
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              if (true /*_isCalibrating*/)
+                Text('Координаты: X=$_currentMaxX, Y=$_currentMaxY'),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  // Небольшой отступ
-                  // Новый виджет с координатами, виден только во время калибровки
-                  if (/*_isCalibrating*/true)
-                    Text('Координаты: X=$_currentMaxX, Y=$_currentMaxY'),
-                  const SizedBox(height: 10),
-                  Row(
-                    // Строка для кнопок и прогресса
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      SizedBox(
-                        width: 100,
-                        child: ElevatedButton(
-                          onPressed: _isCalibrating ? null : _startCalibration,
-                          child: const Text("Старт"),
-                        ),
-                      ),
-                      Builder(
-                        // Вычисление и отображение процента
-                        builder: (context) {
-                          final int totalLeds =
-                              int.tryParse(udpService.ledsText) ?? 1;
-                          final int progressPercent = totalLeds > 0
-                              ? ((_calibCount / totalLeds) * 100).toInt()
-                              : 0;
-                          return Text('Выполнено: $progressPercent%');
-                        },
-                      ),
-                      SizedBox(
-                        width: 100,
-                        child: ElevatedButton(
-                          onPressed: _isCalibrating ? _stopCalibration : null,
-                          child: const Text("Стоп"),
-                        ),
-                      ),
-                    ],
+                  SizedBox(
+                    width: 100,
+                    child: ElevatedButton(
+                      onPressed: _isCalibrating ? null : _startCalibration,
+                      child: const Text("Старт"),
+                    ),
                   ),
-
-
+                  Builder(
+                    builder: (context) {
+                      final int totalLeds =
+                          int.tryParse(udpService.ledsText) ?? 1;
+                      final int progressPercent = totalLeds > 0
+                          ? ((_calibCount / totalLeds) * 100).toInt()
+                          : 0;
+                      return Text('Выполнено: $progressPercent%');
+                    },
+                  ),
+                  SizedBox(
+                    width: 100,
+                    child: ElevatedButton(
+                      onPressed: _isCalibrating ? _stopCalibration : null,
+                      child: const Text("Стоп"),
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

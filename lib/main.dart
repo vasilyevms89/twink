@@ -17,7 +17,6 @@ void main() {
 class Body extends StatelessWidget {
   const Body({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -26,28 +25,73 @@ class Body extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
       ),
-      home: DefaultTabController(
-        length: 3,
-        child: Scaffold(
-          resizeToAvoidBottomInset: true,
-          appBar: AppBar(
-            title: const Text('GyverTwink Manager'),
-            bottom: const TabBar(
-              tabs: [
-                Tab(icon: Icon(Icons.home), text: 'Настройки'),
-                Tab(icon: Icon(Icons.settings), text: 'Настройки эффекта'),
-                Tab(icon: Icon(Icons.camera), text: 'Калибровка'),
-              ],
-            ),
-          ),
-          body: const TabBarView(
-            children: [
-              Center(child: SKSettingsTab()),
-              Center(child: EffectsTab()),
-              Center(child: CalibrationTab()),
-            ],
-          ),
+      // Заменяем stateless Body на StatefulWidget с TabController
+      home: const HomeScreen(),
+    );
+  }
+}
+
+// Новый StatefulWidget для управления TabController
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+// Используем SingleTickerProviderStateMixin для контроллера вкладок
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    // Добавляем слушателя для отслеживания смены вкладок
+    _tabController.addListener(_handleTabSelection);
+  }
+
+  void _handleTabSelection() {
+    // Проверяем, что индекс меняется и новая вкладка — это "Настройки" (индекс 0)
+    if (_tabController.indexIsChanging && _tabController.index == 0) {
+      final udpService = Provider.of<UdpService>(context, listen: false);
+
+      // Если устройства уже были найдены ранее, отправляем запрос настроек
+      if (udpService.found) {
+        udpService.requestCfg();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_handleTabSelection);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        title: const Text('GyverTwink Manager'),
+        bottom: TabBar(
+          controller: _tabController, // Передаем управляемый контроллер
+          tabs: const [
+            Tab(icon: Icon(Icons.home), text: 'Настройки'),
+            Tab(icon: Icon(Icons.settings), text: 'Эффекты'),
+            Tab(icon: Icon(Icons.camera), text: 'Калибровка'),
+          ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController, // Передаем управляемый контроллер
+        children: const [
+          Center(child: SKSettingsTab()),
+          Center(child: EffectsTab()),
+          Center(child: CalibrationTab()),
+        ],
       ),
     );
   }
